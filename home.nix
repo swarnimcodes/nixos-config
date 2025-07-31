@@ -71,5 +71,14 @@
 
   services.ssh-agent.enable = true;
 
+  programs.ghostty = {
+    enable = true;
+    settings = {
+      font-family = "Iosevka";
+      font-size = 12;
+      keybind = "shift+enter=text:\\n";
+    };
+  };
+
   home.stateVersion = "25.05";
 }
