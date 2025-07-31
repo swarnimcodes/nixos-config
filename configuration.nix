@@ -110,6 +110,7 @@
   	neovim
     helix
     ghostty
+    fastfetch
     lazygit
     git
     claude-code

@@ -26,6 +26,11 @@
     };
   };
 
+  home.packages = with pkgs; [
+    nil
+    nixpkgs-fmt
+  ];
+
   programs.helix = {
     enable = true;
     settings = {
@@ -39,7 +44,18 @@
         };
         indent-guides.render = true;
         color-modes = true;
+        auto-format = true;
       };
+    };
+    languages = {
+      language = [
+        {
+          name = "nix";
+          language-servers = [ "nil" ];
+          formatter = { command = "nixpkgs-fmt"; };
+          auto-format = true;
+        }
+      ];
     };
   };
 
@@ -50,7 +66,7 @@
   };
 
   programs.bash = {
-    enable  = true;
+    enable = true;
     shellAliases = {
       ll = "ls -al";
       rebuild = "sudo nixos-rebuild switch --flake ~/git/nix/nix-config";
