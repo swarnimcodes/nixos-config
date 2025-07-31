@@ -75,8 +75,22 @@
     enable = true;
     settings = {
       font-family = "Iosevka";
-      font-size = 12;
+      font-size = 14;
       keybind = "shift+enter=text:\\n";
+    };
+  };
+
+  dconf.settings = {
+    "org/gnome/settings-daemon/plugins/media-keys" = {
+      custom-keybindings = [ "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/" ];
+    };
+    "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0" = {
+      binding = "<Super>Return";
+      command = "ghostty";
+      name = "Open Ghostty Terminal";
+    };
+    "org/gnome/desktop/wm/keybindings" = {
+      close = [ "<Super><Shift>q" ];
     };
   };
 
