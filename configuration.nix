@@ -105,7 +105,9 @@
   	neovim
     helix
     ghostty
+    lazygit
     git
+    claude-code
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
