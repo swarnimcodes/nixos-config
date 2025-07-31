@@ -16,7 +16,7 @@
           select = "underline";
         };
         indent-guides.render = true;
-        color-modes = true
+        color-modes = true;
       };
     };
   };
