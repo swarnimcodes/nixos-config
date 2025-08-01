@@ -34,6 +34,9 @@
   # Enable networking
   networking.networkmanager.enable = true;
 
+  # Set Cloudflare DNS
+  networking.nameservers = [ "1.1.1.1" "1.0.0.1" ];
+
   # Set your time zone.
   time.timeZone = "Asia/Kolkata";
 
@@ -94,9 +97,6 @@
     ];
   };
 
-  # Install firefox.
-  programs.firefox.enable = true;
-
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
@@ -130,9 +130,41 @@
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
 
-  # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
+  # Media services
+  services.jellyfin.enable = true;
+  services.sonarr.enable = true;
+  services.radarr.enable = true;
+  services.prowlarr.enable = true;
+  services.transmission = {
+    enable = true;
+    settings = {
+      download-dir = "/media/downloads";
+      incomplete-dir = "/media/downloads/incomplete";
+    };
+  };
+  services.flaresolverr.enable = true;
+
+  # Create media directories
+  systemd.tmpfiles.rules = [
+    "d /media 0755 root root -"
+    "d /media/movies 0775 jellyfin media -"
+    "d /media/tv 0775 jellyfin media -"
+    "d /media/downloads 0775 transmission media -"
+    "d /media/downloads/incomplete 0775 transmission media -"
+  ];
+
+  # Create media group - services will add themselves automatically
+  users.groups.media = { };
+
+  # Open ports in the firewall for media services
+  networking.firewall.allowedTCPPorts = [
+    8096 # Jellyfin
+    7878 # Radarr
+    8989 # Sonarr
+    9696 # Prowlarr
+    9091 # Transmission
+    8191 # FlareSolverr
+  ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
 

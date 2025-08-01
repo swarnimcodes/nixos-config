@@ -71,6 +71,18 @@ The system uses a flake-based approach where:
 - **Terminal**: ghostty
 - **Automatic cleanup**: Weekly garbage collection, 7-day retention, 10 boot generations max
 
+## Media Services
+
+The system includes a complete media automation stack:
+
+- **Jellyfin**: Media server (http://localhost:8096)
+- **Sonarr**: TV show management (http://localhost:8989)
+- **Radarr**: Movie management (http://localhost:7878)
+- **Prowlarr**: Indexer management (http://localhost:9696)
+- **Transmission**: BitTorrent client with web UI (http://localhost:9091)
+
+All services run as system services and start automatically on boot. Configure Prowlarr first to add indexers, then connect Sonarr/Radarr to both Prowlarr (for indexers) and Transmission (for downloads).
+
 ## Development Notes
 
 - System packages go in `configuration.nix` under `environment.systemPackages`
