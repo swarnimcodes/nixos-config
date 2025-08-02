@@ -2,7 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
 
 {
@@ -12,11 +12,62 @@
       ./hardware-configuration.nix
     ];
 
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings = {
+    experimental-features = [ "nix-command" "flakes" ];
+    auto-optimise-store = true;
+    max-jobs = "auto";
+    cores = 0;
+    substituters = [
+      "https://cache.nixos.org/"
+      "https://nix-community.cachix.org"
+    ];
+    trusted-public-keys = [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+    ];
+    builders-use-substitutes = true;
+    warn-dirty = false;
+  };
   nix.gc = {
     automatic = true;
     dates = "weekly";
     options = "--delete-older-than 7d";
+  };
+  nix.optimise = {
+    automatic = true;
+    dates = [ "03:45" ];
+  };
+
+  # Performance optimizations
+  boot.kernel.sysctl = {
+    "vm.swappiness" = 10;
+    "vm.vfs_cache_pressure" = 50;
+    "vm.dirty_ratio" = 15;
+    "vm.dirty_background_ratio" = 5;
+    "net.core.rmem_max" = 16777216;
+    "net.core.wmem_max" = 16777216;
+    "net.ipv4.tcp_rmem" = "4096 12582912 16777216";
+    "net.ipv4.tcp_wmem" = "4096 12582912 16777216";
+    "net.core.netdev_max_backlog" = 5000;
+  };
+
+  boot.tmp.useTmpfs = true;
+  boot.tmp.tmpfsSize = "50%";
+
+  zramSwap = {
+    enable = true;
+    algorithm = "zstd";
+    memoryPercent = 25;
+  };
+
+  services.irqbalance.enable = true;
+  powerManagement.cpuFreqGovernor = lib.mkDefault "performance";
+
+  # Console font for boot messages
+  console = {
+    font = "ter-132n";
+    packages = with pkgs; [ terminus_font ];
+    earlySetup = true;
   };
 
   # Bootloader.
@@ -24,18 +75,18 @@
   boot.loader.systemd-boot.configurationLimit = 10;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  networking.hostName = "nixos"; # Define your hostname.
-  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
-
-  # Configure network proxy if necessary
-  # networking.proxy.default = "http://user:password@proxy:port/";
-  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
-
-  # Enable networking
-  networking.networkmanager.enable = true;
-
-  # Set Cloudflare DNS
-  networking.nameservers = [ "1.1.1.1" "1.0.0.1" ];
+  # Static IP networking configuration
+  networking = {
+    hostName = "nixos";
+    interfaces.wlp3s0 = {
+      ipv4.addresses = [{
+        address = "192.168.1.14";
+        prefixLength = 24;
+      }];
+    };
+    defaultGateway = "192.168.1.1";
+    nameservers = [ "1.1.1.1" "1.0.0.1" ];
+  };
 
   # Set your time zone.
   time.timeZone = "Asia/Kolkata";
@@ -130,41 +181,87 @@
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
 
+  # Enable graphics drivers for hardware acceleration
+  hardware.graphics = {
+    enable = true;
+    extraPackages = with pkgs; [
+      # Intel graphics (best for video encoding/decoding)
+      intel-media-driver # VAAPI driver for newer Intel GPUs
+      vaapiIntel # VAAPI driver for older Intel GPUs  
+      # AMD graphics
+      mesa
+      amdvlk
+    ];
+  };
+
   # Media services
-  services.jellyfin.enable = true;
-  services.sonarr.enable = true;
-  services.radarr.enable = true;
-  services.prowlarr.enable = true;
+  services.jellyfin = {
+    enable = true;
+    group = "video"; # Add to video group for GPU access
+    openFirewall = true;
+  };
+  services.immich = {
+    enable = true;
+    openFirewall = true;
+  };
+  services.sonarr = {
+    enable = true;
+    group = "media";
+    openFirewall = true;
+  };
+  services.headphones = {
+    enable = true;
+    group = "media";
+    host = "0.0.0.0";
+    dataDir = "/media/audio";
+  };
+  services.radarr = {
+    enable = true;
+    group = "media";
+    openFirewall = true;
+  };
+  services.prowlarr = {
+    enable = true;
+    openFirewall = true;
+  };
   services.transmission = {
     enable = true;
     settings = {
       download-dir = "/media/downloads";
       incomplete-dir = "/media/downloads/incomplete";
     };
+    openFirewall = true;
   };
   services.flaresolverr.enable = true;
+  services.sabnzbd = {
+    enable = true;
+    group = "media";
+    openFirewall = true;
+  };
 
   # Create media directories
   systemd.tmpfiles.rules = [
     "d /media 0755 root root -"
-    "d /media/movies 0775 jellyfin media -"
-    "d /media/tv 0775 jellyfin media -"
-    "d /media/downloads 0775 transmission media -"
-    "d /media/downloads/incomplete 0775 transmission media -"
+    "d /media/movies 0775 root media -"
+    "d /media/tv 0775 root media -"
+    "d /media/audio 0775 root media -"
+    "d /media/downloads 0775 root media -"
+    "d /media/downloads/incomplete 0775 root media -"
   ];
 
-  # Create media group - services will add themselves automatically
+  # Create media group
   users.groups.media = { };
 
   # Open ports in the firewall for media services
-  networking.firewall.allowedTCPPorts = [
-    8096 # Jellyfin
-    7878 # Radarr
-    8989 # Sonarr
-    9696 # Prowlarr
-    9091 # Transmission
-    8191 # FlareSolverr
-  ];
+  # networking.firewall.allowedTCPPorts = [
+  #   8096 # Jellyfin
+  #   7878 # Radarr
+  #   8989 # Sonarr
+  #   9696 # Prowlarr
+  #   9091 # Transmission
+  #   8191 # FlareSolverr
+  #   8080 # SABnzbd
+  # ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
 
